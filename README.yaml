@@ -1,0 +1,34 @@
+name: terraform-aws-gitlab-runners
+license: GPL3
+gitlab_repo: guardianproject-ops/terraform-aws-gitlab-runners
+
+description: |-
+  Terraform module to prepare an AWS account for building AMIs with packer.
+
+introduction: |-
+  This Terraform module sets up the necessary AWS infrastructure to build AMIs using HashiCorp Packer in a GitLab CI pipeline. It creates a dedicated VPC with private subnets, IAM roles and policies for both the Packer builder instances and the CI pipeline user. The module implements AWS Systems Manager Session Manager for secure instance access and uses role assumption for enhanced security.
+
+  The module creates:
+  - A VPC with private subnets for building AMIs
+  - An IAM role for Packer with necessary EC2 and SSM permissions
+  - An instance profile with SSM access for builder instances
+  - A CI user with minimal permissions to assume the Packer role
+
+usage: |-
+
+  ```terraform
+  module "packer_pipeline" {
+      source = "git::https://gitlab.com/guardianproject-ops/terraform-aws-packer-pipeline?ref=main"
+      context = module.this.context
+      vpc_cidr          = "10.0.128.0/24"
+      subnets_cidr      = "10.0.128.0/26"
+  }
+  ```
+
+include:
+  - docs/terraform.md
+
+contributors:
+  - name: "Abel Luck"
+    gitlab: "abelxluck"
+    gitlab_id: 941123
