@@ -278,7 +278,9 @@ us][website] to get support with using our projects.
 <!-- markdownlint-restore -->
 
   [abelxluck_homepage]: https://gitlab.com/abelxluck
-  [abelxluck_avatar]: https://gitlab.com/uploads/-/system/user/avatar/941123/avatar.png?width=130
+
+  [abelxluck_avatar]: https://secure.gravatar.com/avatar/0f605397e0ead93a68e1be26dc26481a?s=200&amp;d=identicon
+
 
 <!-- markdownlint-disable -->
   [website]: https://guardianproject.info/?utm_source=gitlab&utm_medium=readme&utm_campaign=guardianproject-ops/terraform-aws-gitlab-runners&utm_content=website
