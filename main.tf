@@ -236,7 +236,6 @@ output "pkrvars_hcl" {
   value = local.pkrvars_hcl
 }
 
-
 output "pkrvars_hcl_b64" {
   value = base64encode(local.pkrvars_hcl)
 }

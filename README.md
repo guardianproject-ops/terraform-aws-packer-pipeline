@@ -207,7 +207,7 @@ In general, PRs are welcome. We follow the typical "fork-and-pull" Git workflow.
 
 ## Copyright
 
-Copyright © 2021-2024 The Guardian Project
+Copyright © 2021-2025 The Guardian Project
 
 
 
