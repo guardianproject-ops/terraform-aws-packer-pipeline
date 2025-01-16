@@ -3,6 +3,9 @@ provider "aws" {
     tags = module.this.tags
   }
 }
+
+data "aws_region" "this" {}
+
 data "aws_availability_zones" "this" {
   state = "available"
 }
@@ -136,20 +139,6 @@ resource "aws_iam_instance_profile" "ssm_instance_core" {
   role = aws_iam_role.ssm_instance_core.name
 }
 
-
-# export it for use by packer
-output "instance_profile_id" {
-  value       = aws_iam_instance_profile.ssm_instance_core.id
-  description = "The instance profile id for the builder instances"
-}
-output "instance_profile_arn" {
-  value       = aws_iam_instance_profile.ssm_instance_core.arn
-  description = "The instance profile arn for the builder instances"
-}
-
-
-# now we need to create an IAM user that will be used in the gitlab ci pipeline to run the builds
-#
 data "aws_iam_policy_document" "instance_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
@@ -161,6 +150,7 @@ data "aws_iam_policy_document" "instance_assume_role_policy" {
   }
 }
 
+# now we need to create an IAM user that will be used in the gitlab ci pipeline to run the builds
 resource "aws_iam_user" "ci" {
   name = "${module.this.id}-deploy"
   tags = module.this.tags
@@ -194,39 +184,4 @@ resource "aws_iam_user_policy" "ci" {
 resource "aws_iam_access_key" "ci_v1" {
   user   = aws_iam_user.ci.name
   status = "Active"
-}
-
-output "iam_user_access_key_id" {
-  value     = aws_iam_access_key.ci_v1.id
-  sensitive = true
-}
-
-output "iam_user_secret_access_key" {
-  value     = aws_iam_access_key.ci_v1.secret
-  sensitive = true
-}
-
-output "packer_role_arn" {
-  value       = aws_iam_role.packer.arn
-  description = "The ARN of the Packer role that can be assumed by the CI user"
-}
-
-locals {
-  pkrvars_hcl = <<EOT
-builder_vpc_id       = "${local.vpc_id}"
-builder_subnet_id    = "${local.private_subnet_main_id}"
-assume_role_arn      = "${aws_iam_role.packer.arn}"
-iam_instance_profile = "${aws_iam_instance_profile.ssm_instance_core.id}"
-access_key           = "${aws_iam_access_key.ci_v1.id}"
-secret_key           = "${aws_iam_access_key.ci_v1.secret}"
-EOT
-
-}
-
-output "pkrvars_hcl" {
-  value = local.pkrvars_hcl
-}
-
-output "pkrvars_hcl_b64" {
-  value = base64encode(local.pkrvars_hcl)
 }
