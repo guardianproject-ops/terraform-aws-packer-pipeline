@@ -107,18 +107,6 @@ data "aws_iam_policy_document" "packer_role_policy" {
   }
 }
 
-resource "aws_iam_role" "packer" {
-  name               = "${module.this.id}-packer"
-  assume_role_policy = data.aws_iam_policy_document.packer_assume_role.json
-  tags               = module.this.tags
-}
-
-resource "aws_iam_role_policy" "packer" {
-  name   = "${module.this.id}-PackerBuildPolicy"
-  role   = aws_iam_role.packer.id
-  policy = data.aws_iam_policy_document.packer_role_policy.json
-}
-
 data "aws_iam_policy" "ssm_managed_instance_core" {
   arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
@@ -150,38 +138,42 @@ data "aws_iam_policy_document" "instance_assume_role_policy" {
   }
 }
 
-# now we need to create an IAM user that will be used in the gitlab ci pipeline to run the builds
-resource "aws_iam_user" "ci" {
-  name = "${module.this.id}-deploy"
-  tags = module.this.tags
+## New fangled way to connect to AWS from a gitlab ci pipeline without using an IAM user
+# ref: https://gitlab.com/guided-explorations/aws/configure-openid-connect-in-aws
+data "tls_certificate" "gitlab" {
+  url = var.gitlab_tls_url
 }
 
-data "aws_iam_policy_document" "packer_assume_role" {
+resource "aws_iam_openid_connect_provider" "gitlab" {
+  url             = var.gitlab_url
+  client_id_list  = [var.oidc_gitlab_aud_value]
+  thumbprint_list = [data.tls_certificate.gitlab.certificates[0].sha1_fingerprint]
+}
+
+data "aws_iam_policy_document" "packer_gitlab_assume" {
   statement {
-    effect  = "Allow"
-    actions = ["sts:AssumeRole"]
+    actions = ["sts:AssumeRoleWithWebIdentity"]
 
     principals {
-      type        = "AWS"
-      identifiers = [aws_iam_user.ci.arn]
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.gitlab.arn]
+    }
+    condition {
+      test     = "StringLike"
+      variable = "${aws_iam_openid_connect_provider.gitlab.url}:${var.oidc_gitlab_match_field}"
+      values   = var.oidc_gitlab_match_value
     }
   }
 }
-data "aws_iam_policy_document" "ci_user_policy" {
-  statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
-    resources = [aws_iam_role.packer.arn]
-  }
+
+resource "aws_iam_role" "packer_gitlab" {
+  name               = "${module.this.id}-packer-gitlab-ci"
+  assume_role_policy = data.aws_iam_policy_document.packer_gitlab_assume.json
+  tags               = module.this.tags
 }
 
-resource "aws_iam_user_policy" "ci" {
-  name   = module.this.id
-  user   = aws_iam_user.ci.name
-  policy = data.aws_iam_policy_document.ci_user_policy.json
-}
-
-resource "aws_iam_access_key" "ci_v1" {
-  user   = aws_iam_user.ci.name
-  status = "Active"
+resource "aws_iam_role_policy" "packer_gitlab" {
+  name   = "${module.this.id}-PackerBuildPolicy"
+  role   = aws_iam_role.packer_gitlab.id
+  policy = data.aws_iam_policy_document.packer_role_policy.json
 }
